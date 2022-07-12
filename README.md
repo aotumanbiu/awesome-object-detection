@@ -12,6 +12,7 @@
   * [x] [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355v5)
     
   * [ ] [ATSS: Bridging the Gap Between Anchor-based and Anchor-free Detection via Adaptive Training Sample Selection](https://arxiv.org/abs/1912.02424v4)
+  * [ ] [LD: Localization Distillation for Dense Object Detection](https://arxiv.org/abs/2102.12252)
     
   * [ ] ........
     
