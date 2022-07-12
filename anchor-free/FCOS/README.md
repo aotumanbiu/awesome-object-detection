@@ -37,5 +37,3 @@ torchrun --nproc_per_node=8 train.py\
 torch >= 1.11.0
 torchvision >= 0.12.0
 ```
-
-对于官网的提供的参数设置，本代码将其直接添加到了train文件中，因此本代码直接运行即可。

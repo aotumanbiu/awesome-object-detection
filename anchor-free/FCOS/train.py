@@ -1,17 +1,12 @@
 r"""PyTorch Detection Training.
-
 To run in a multi-gpu environment, use the distributed launcher::
-
     python -m torch.distributed.launch --nproc_per_node=$NGPU --use_env \
         train.py ... --world-size $NGPU
-
 The default hyperparameters are tuned for training on 8 gpus and 2 images per gpu.
     --lr 0.02 --batch-size 2 --world-size 8
 If you use different number of gpus, the learning rate should be changed to 0.02/8*$NGPU.
-
 On top of that, for training Faster/Mask R-CNN, the default hyperparameters are
     --epochs 26 --lr-steps 16 22 --aspect-ratio-group-factor 3
-
 Also, if you train Keypoint R-CNN, the default hyperparameters are
     --epochs 46 --lr-steps 36 43 --aspect-ratio-group-factor 3
 Because the number of images is smaller in the person keypoint subset of COCO,
@@ -66,25 +61,21 @@ def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description="PyTorch Detection Training", add_help=add_help)
 
-    parser.add_argument("--data-path", default="D:/Downloads/dataset/tiny_coco/", type=str, help="dataset path")
+    parser.add_argument("--data-path", default="/datasets01/COCO/022719/", type=str, help="dataset path")
     parser.add_argument("--dataset", default="coco", type=str, help="dataset name")
-    # 这里进行的了修改 默认为 fcos_resnet50_fpn
-    parser.add_argument("--model", default="fcos_resnet50_fpn", type=str, help="model name")
+    parser.add_argument("--model", default="maskrcnn_resnet50_fpn", type=str, help="model name")
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
     parser.add_argument(
         "-b", "--batch-size", default=2, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
     )
-    # 默认即可
     parser.add_argument("--epochs", default=26, type=int, metavar="N", help="number of total epochs to run")
     parser.add_argument(
-        "-j", "--workers", default=0, type=int, metavar="N", help="number of data loading workers (default: 4)"
+        "-j", "--workers", default=4, type=int, metavar="N", help="number of data loading workers (default: 4)"
     )
     parser.add_argument("--opt", default="sgd", type=str, help="optimizer")
-    # FCOS默认值 0.01
     parser.add_argument(
         "--lr",
-        # default=0.02,
-        default=0.01,
+        default=0.02,
         type=float,
         help="initial learning rate, 0.02 is the default value for training on 8 gpus and 2 images_per_gpu",
     )
@@ -110,7 +101,6 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         "--lr-step-size", default=8, type=int, help="decrease lr every step-size epochs (multisteplr scheduler only)"
     )
-    # 默认即可
     parser.add_argument(
         "--lr-steps",
         default=[16, 22],
@@ -125,7 +115,6 @@ def get_args_parser(add_help=True):
     parser.add_argument("--output-dir", default=".", type=str, help="path to save outputs")
     parser.add_argument("--resume", default="", type=str, help="path of checkpoint")
     parser.add_argument("--start_epoch", default=0, type=int, help="start epoch")
-    # 默认即可
     parser.add_argument("--aspect-ratio-group-factor", default=3, type=int)
     parser.add_argument("--rpn-score-thresh", default=None, type=float, help="rpn score threshold for faster-rcnn")
     parser.add_argument(
@@ -155,17 +144,10 @@ def get_args_parser(add_help=True):
     parser.add_argument("--world-size", default=1, type=int, help="number of distributed processes")
     parser.add_argument("--dist-url", default="env://", type=str, help="url used to set up distributed training")
     parser.add_argument("--weights", default=None, type=str, help="the weights enum name to load")
-    # 由默认修改为 ResNet50_Weights.IMAGENET1K_V1
-    # parser.add_argument("--weights-backbone", default=None, type=str, help="the backbone weights enum name to load")
-    parser.add_argument("--weights-backbone",
-                        default="ResNet50_Weights.IMAGENET1K_V1",
-                        type=str,
-                        help="the backbone weights enum name to load")
+    parser.add_argument("--weights-backbone", default=None, type=str, help="the backbone weights enum name to load")
 
     # Mixed precision training parameters
-    # 直接赋值为True
-    # parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
-    parser.add_argument("--amp", default=True, help="Use torch.cuda.amp for mixed precision training")
+    parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
 
     # Use CopyPaste augmentation training parameter
     parser.add_argument(
@@ -234,11 +216,9 @@ def main(args):
     # model = torchvision.models.detection.__dict__[args.model](
     #     weights=args.weights, weights_backbone=args.weights_backbone, num_classes=num_classes, **kwargs
     # )
-
     model = fcos_resnet50_fpn(weights=args.weights,
                               weights_backbone=args.weights_backbone,
-                              num_classes=num_classes,
-                              **kwargs)
+                              num_classes=num_classes, **kwargs)
     model.to(device)
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
