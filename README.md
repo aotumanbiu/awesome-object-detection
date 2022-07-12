@@ -12,6 +12,11 @@
   * [x] [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355v5)
     
   * [ ] [ATSS: Bridging the Gap Between Anchor-based and Anchor-free Detection via Adaptive Training Sample Selection](https://arxiv.org/abs/1912.02424v4)
+  
+  * [ ] [Generalized Focal Loss: Learning Qualified and Distributed Bounding Boxes for Dense Object Detection](https://proceedings.neurips.cc//paper/2020/file/f0bda020d2470f2e74990a07a607ebd9-Paper.pdf)
+  
+  * [ ] [Generalized Focal Loss V2: Learning Reliable Localization Quality Estimation for Dense Object Detection](https://openaccess.thecvf.com/content/CVPR2021/papers/Li_Generalized_Focal_Loss_V2_Learning_Reliable_Localization_Quality_Estimation_for_CVPR_2021_paper.pdf)
+  
   * [ ] [LD: Localization Distillation for Dense Object Detection](https://arxiv.org/abs/2102.12252)
     
   * [ ] ........
