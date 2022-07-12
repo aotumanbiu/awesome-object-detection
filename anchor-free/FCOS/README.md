@@ -44,3 +44,6 @@ torchvision >= 0.12.0
 ### 相关阅读
 **a. [FCOS:一阶全卷积目标检测](https://zhuanlan.zhihu.com/p/63868458)**  
 **b. [FCOS算法详解](https://blog.csdn.net/WZZ18191171661/article/details/89258086)**
+
+### 算法总结
+待补充......
