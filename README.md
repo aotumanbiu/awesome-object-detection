@@ -7,7 +7,7 @@
   * [ ] SSD
   * [ ] ........
   
-* anchor-base
+* anchor-free
 
   * [x] [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355v5)
     
