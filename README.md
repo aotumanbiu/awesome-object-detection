@@ -19,6 +19,8 @@
   
   * [ ] [LD: Localization Distillation for Dense Object Detection](https://arxiv.org/abs/2102.12252)
     
+  * [ ] [CenterNet: Keypoint Triplets for Object Detection](https://arxiv.org/abs/1904.08189v3)
+    
   * [ ] ........
     
     
