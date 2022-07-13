@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 import torch
 from torch import nn, Tensor
 
-from torchvision.ops import sigmoid_focal_loss, generalized_box_iou_loss
+# from torchvision.ops import sigmoid_focal_loss, generalized_box_iou_loss
 from torchvision.ops import boxes as box_ops
 from torchvision.ops import misc as misc_nn_ops
 from torchvision.ops.feature_pyramid_network import LastLevelP6P7
@@ -17,10 +17,15 @@ from torchvision.models._api import WeightsEnum, Weights
 from torchvision.models._meta import _COCO_CATEGORIES
 from torchvision.models._utils import handle_legacy_interface, _ovewrite_value_param
 from torchvision.models.resnet import ResNet50_Weights, resnet50
-from torchvision.models.detection import _utils as det_utils
-from torchvision.models.detection.anchor_utils import AnchorGenerator
+# from torchvision.models.detection import _utils as det_utils
+# from torchvision.models.detection.anchor_utils import AnchorGenerator
 from torchvision.models.detection.backbone_utils import _resnet_fpn_extractor, _validate_trainable_layers
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
+
+# 类似与FCOS 将其实验单独提取出来方便debug学习
+from anchor_utils.anchor_generator import AnchorGenerator
+from anchor_utils import det_utils
+from utils.loss_functions import sigmoid_focal_loss, generalized_box_iou_loss
 
 __all__ = [
     "FCOS",
@@ -87,19 +92,19 @@ class FCOSHead(nn.Module):
 
         # regression loss: GIoU loss
         # TODO: vectorize this instead of using a for loop
-        pred_boxes = [  # 回归结果解码
+        pred_boxes = [  # 预测结果解码
             self.box_coder.decode_single(bbox_regression_per_image, anchors_per_image)
             for anchors_per_image, bbox_regression_per_image in zip(anchors, bbox_regression)
         ]
         # amp issue: pred_boxes need to convert float
-        loss_bbox_reg = generalized_box_iou_loss(
+        loss_bbox_reg = generalized_box_iou_loss(  # GIoU loss
             torch.stack(pred_boxes)[foregroud_mask].float(),
             torch.stack(all_gt_boxes_targets)[foregroud_mask],
             reduction="sum",
         )
 
         # ctrness loss
-        bbox_reg_targets = [  # 真实框和负责其期预测先验框进行编码 (*l, *t, *r, *b)
+        bbox_reg_targets = [  # 真实框和负责其预测先验框进行编码
             self.box_coder.encode_single(anchors_per_image, boxes_targets_per_image)
             for anchors_per_image, boxes_targets_per_image in zip(anchors, all_gt_boxes_targets)
         ]
@@ -109,7 +114,7 @@ class FCOSHead(nn.Module):
         else:
             left_right = bbox_reg_targets[:, :, [0, 2]]
             top_bottom = bbox_reg_targets[:, :, [1, 3]]
-            gt_ctrness_targets = torch.sqrt(
+            gt_ctrness_targets = torch.sqrt(  # 计算目标 ctrness
                 (left_right.min(dim=-1)[0] / left_right.max(dim=-1)[0])
                 * (top_bottom.min(dim=-1)[0] / top_bottom.max(dim=-1)[0])
             )
@@ -451,9 +456,10 @@ class FCOS(nn.Module):
             gt_boxes = targets_per_image["boxes"]  # 获取当前图片中所有真实框 [N, 4]
             gt_centers = (gt_boxes[:, :2] + gt_boxes[:, 2:]) / 2  # 获取当前图片所有真实框中心点 [M, 2]
             anchor_centers = (anchors_per_image[:, :2] + anchors_per_image[:, 2:]) / 2  # 获取先验框中心点 [N, 2]
-            anchor_sizes = anchors_per_image[:, 2] - anchors_per_image[:, 0]  # 先验框大小 [N, 1] 详细参考 self.anchor_generator(images, features)
+            anchor_sizes = anchors_per_image[:, 2] - anchors_per_image[:,
+                                                     0]  # 先验框大小 [N, 1] 详细参考 self.anchor_generator(images, features)
             # center sampling: anchor point must be close enough to gt center.
-            pairwise_match = (anchor_centers[:, None, :] - gt_centers[None, :, :]).abs_().max(   # [N, M]
+            pairwise_match = (anchor_centers[:, None, :] - gt_centers[None, :, :]).abs_().max(  # [N, M]
                 dim=2
             ).values < self.center_sampling_radius * anchor_sizes[:, None]
             # compute pairwise distance between N points and M boxes
@@ -620,7 +626,7 @@ class FCOS(nn.Module):
         # create the set of anchors
         anchors = self.anchor_generator(images, features)
         # recover level sizes
-        num_anchors_per_level = [x.size(2) * x.size(3) for x in features]
+        num_anchors_per_level = [x.size(2) * x.size(3) for x in features]  # 每层先验框的数量
 
         losses = {}
         detections: List[Dict[str, Tensor]] = []

@@ -16,20 +16,21 @@ import datetime
 import os
 import time
 
-import presets
+from train_utils import presets
 import torch
 import torch.utils.data
 import torchvision
 import torchvision.models.detection
 import torchvision.models.detection.mask_rcnn
-import utils
-from coco_utils import get_coco, get_coco_kp
-from engine import train_one_epoch, evaluate
-from group_by_aspect_ratio import GroupedBatchSampler, create_aspect_ratio_groups
+# from utils import utils
+from utils.coco_utils import get_coco, get_coco_kp
+from train_utils.engine import train_one_epoch, evaluate
+from train_utils.group_by_aspect_ratio import GroupedBatchSampler, create_aspect_ratio_groups
 from torchvision.transforms import InterpolationMode
-from transforms import SimpleCopyPaste
+from utils.transforms import SimpleCopyPaste
 
 from fcos import fcos_resnet50_fpn
+import utils.distributed_utils as utils
 
 
 def copypaste_collate_fn(batch):
@@ -61,7 +62,7 @@ def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description="PyTorch Detection Training", add_help=add_help)
 
-    parser.add_argument("--data-path", default="/datasets01/COCO/022719/", type=str, help="dataset path")
+    parser.add_argument("--data-path", default="D:/Downloads/dataset/tiny_coco", type=str, help="dataset path")
     parser.add_argument("--dataset", default="coco", type=str, help="dataset name")
     parser.add_argument("--model", default="maskrcnn_resnet50_fpn", type=str, help="model name")
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
@@ -70,7 +71,7 @@ def get_args_parser(add_help=True):
     )
     parser.add_argument("--epochs", default=26, type=int, metavar="N", help="number of total epochs to run")
     parser.add_argument(
-        "-j", "--workers", default=4, type=int, metavar="N", help="number of data loading workers (default: 4)"
+        "-j", "--workers", default=0, type=int, metavar="N", help="number of data loading workers (default: 4)"
     )
     parser.add_argument("--opt", default="sgd", type=str, help="optimizer")
     parser.add_argument(
