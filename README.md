@@ -4,7 +4,7 @@
 * anchor-base
 
   * [x] [RetinaNet: Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002v2) 
-  * [ ] [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325v5)
+  * [x] [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325v5)
   * [ ] ........
   
 * anchor-free
