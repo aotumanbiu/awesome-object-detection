@@ -144,30 +144,39 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                 - loss_wh (Tensor): loss of hw heatmap
                 - loss_offset (Tensor): loss of offset heatmap.
         """
-        assert len(center_heatmap_preds) == len(wh_preds) == len(
-            offset_preds) == 1
+        assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds) == 1
+
+        # 注意这里的H, W的大小是网络输入大小的 1/4
+        # 热力图预测 [B, num_classes, H, W] 代表每一个热力点是否有物体存在，以及物体的种类
         center_heatmap_pred = center_heatmap_preds[0]
+        # 宽高预测 [B, 2, H, W] 代表每一个物体宽高的预测情况
         wh_pred = wh_preds[0]
+        # 中心点预测 [B, 2, H, W] 代表每一个物体中心距离热力点偏移的情况
         offset_pred = offset_preds[0]
 
+        # img_metas[0]['pad_shape'] 值网路的输入尺寸大小 [512, 512]
+        # avg_factor bs张图片中包含检测目标的总数量
         target_result, avg_factor = self.get_targets(gt_bboxes, gt_labels,
                                                      center_heatmap_pred.shape,
                                                      img_metas[0]['pad_shape'])
 
-        center_heatmap_target = target_result['center_heatmap_target']
-        wh_target = target_result['wh_target']
-        offset_target = target_result['offset_target']
+        center_heatmap_target = target_result['center_heatmap_target']  # 目标热力图
+        wh_target = target_result['wh_target']  # 目标宽高
+        offset_target = target_result['offset_target']   # 目标中心点偏移
         wh_offset_target_weight = target_result['wh_offset_target_weight']
 
         # Since the channel of wh_target and offset_target is 2, the avg_factor
         # of loss_center_heatmap is always 1/2 of loss_wh and loss_offset.
+        # loss_center_heatmap = gaussian_loss / avg_factor
         loss_center_heatmap = self.loss_center_heatmap(
             center_heatmap_pred, center_heatmap_target, avg_factor=avg_factor)
+        # l1_loss
         loss_wh = self.loss_wh(
             wh_pred,
             wh_target,
             wh_offset_target_weight,
             avg_factor=avg_factor * 2)
+        # l1_loss
         loss_offset = self.loss_offset(
             offset_pred,
             offset_target,
@@ -200,47 +209,58 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                - wh_offset_target_weight (Tensor): weights of wh and offset \
                    predict, shape (B, 2, H, W).
         """
+        # 输入图像长宽 [512, 512]
         img_h, img_w = img_shape[:2]
+        # B, _, 128, 128
         bs, _, feat_h, feat_w = feat_shape
 
+        # 特征图长宽占输入图像长宽的比例 即 128 / 512 = 0.25
         width_ratio = float(feat_w / img_w)
         height_ratio = float(feat_h / img_h)
 
-        center_heatmap_target = gt_bboxes[-1].new_zeros(
-            [bs, self.num_classes, feat_h, feat_w])
+        # Heatmap表示分类信息, 每一个类别将会产生一个单独的Heatmap图. 对于每张Heatmap图而言,
+        # 当某个坐标处包含目标的中心点时, 则会在该目标处产生一个关键点, 我们利用高斯圆来表示整个关键点.
+        # new一个与gt_bboxes类型相同且大小为[bs, num_classes, feat_h, feat_w]且值全为0的张量
+        center_heatmap_target = gt_bboxes[-1].new_zeros([bs, self.num_classes, feat_h, feat_w])
+        # 下面三者亦是如此
         wh_target = gt_bboxes[-1].new_zeros([bs, 2, feat_h, feat_w])
         offset_target = gt_bboxes[-1].new_zeros([bs, 2, feat_h, feat_w])
-        wh_offset_target_weight = gt_bboxes[-1].new_zeros(
-            [bs, 2, feat_h, feat_w])
+        wh_offset_target_weight = gt_bboxes[-1].new_zeros([bs, 2, feat_h, feat_w])
 
         for batch_id in range(bs):
-            gt_bbox = gt_bboxes[batch_id]
-            gt_label = gt_labels[batch_id]
+            gt_bbox = gt_bboxes[batch_id]   # 当前图像中的所有真实框
+            gt_label = gt_labels[batch_id]  # 当前图像中的所有真实框对应的类别
+            # 真实框映射到特征图大小中的中心点坐标
             center_x = (gt_bbox[:, [0]] + gt_bbox[:, [2]]) * width_ratio / 2
             center_y = (gt_bbox[:, [1]] + gt_bbox[:, [3]]) * height_ratio / 2
             gt_centers = torch.cat((center_x, center_y), dim=1)
 
-            for j, ct in enumerate(gt_centers):
-                ctx_int, cty_int = ct.int()  # quzhengzhongxindian
-                ctx, cty = ct  # yuanshizhongxindian
+            for j, ct in enumerate(gt_centers):  # 当前图像中的某一真实框
+                # 坐标值向下取整
+                # 相当于物体中心点往坐上偏移
+                ctx_int, cty_int = ct.int()  # point
+                ctx, cty = ct  # 原始中心坐标值
+                # 真实框映射到特征图大小中的长宽
                 scale_box_h = (gt_bbox[j][3] - gt_bbox[j][1]) * height_ratio
                 scale_box_w = (gt_bbox[j][2] - gt_bbox[j][0]) * width_ratio
-                radius = gaussian_radius([scale_box_h, scale_box_w],
-                                         min_overlap=0.3)
-                radius = max(0, int(radius))
-                ind = gt_label[j]
-                gen_gaussian_target(center_heatmap_target[batch_id, ind],
-                                    [ctx_int, cty_int], radius)
 
+                # 根据目标真实框的大小计算高斯圆的最小半径 radius
+                # Heatmap图上面, 以point为中心点, 半径为R计算高斯值, 从而生成高斯圆, point点处数值最大, 随着半径R的增加数值不断减小
+                radius = gaussian_radius([scale_box_h, scale_box_w], min_overlap=0.3)  # TODO　一般选择0.7作为临界值
+                radius = max(0, int(radius))
+                ind = gt_label[j]  # 真实框对应的类别 即索引
+                gen_gaussian_target(center_heatmap_target[batch_id, ind], [ctx_int, cty_int], radius)
+
+                # 存放目标长宽
                 wh_target[batch_id, 0, cty_int, ctx_int] = scale_box_w
                 wh_target[batch_id, 1, cty_int, ctx_int] = scale_box_h
-
+                # 存放中心点的偏移
                 offset_target[batch_id, 0, cty_int, ctx_int] = ctx - ctx_int
                 offset_target[batch_id, 1, cty_int, ctx_int] = cty - cty_int
-
+                # 有则为 1 否则为 0
                 wh_offset_target_weight[batch_id, :, cty_int, ctx_int] = 1
 
-        avg_factor = max(1, center_heatmap_target.eq(1).sum())
+        avg_factor = max(1, center_heatmap_target.eq(1).sum())  # 在bs张图片中含有目标的总数量
         target_result = dict(
             center_heatmap_target=center_heatmap_target,
             wh_target=wh_target,
@@ -403,7 +423,7 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
         if labels.numel() > 0:
             max_num = cfg.max_per_img
             bboxes, keep = batched_nms(bboxes[:, :4], bboxes[:,
-                                                             -1].contiguous(),
+                                                      -1].contiguous(),
                                        labels, cfg.nms)
             if max_num > 0:
                 bboxes = bboxes[:max_num]

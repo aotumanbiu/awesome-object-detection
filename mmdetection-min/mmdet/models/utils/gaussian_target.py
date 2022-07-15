@@ -18,13 +18,12 @@ def gaussian2D(radius, sigma=1, dtype=torch.float32, device='cpu'):
         h (Tensor): Gaussian kernel with a
             ``(2 * radius + 1) * (2 * radius + 1)`` shape.
     """
-    x = torch.arange(
-        -radius, radius + 1, dtype=dtype, device=device).view(1, -1)
-    y = torch.arange(
-        -radius, radius + 1, dtype=dtype, device=device).view(-1, 1)
+    x = torch.arange(-radius, radius + 1, dtype=dtype, device=device).view(1, -1)
+    y = torch.arange(-radius, radius + 1, dtype=dtype, device=device).view(-1, 1)
 
     h = (-(x * x + y * y) / (2 * sigma * sigma)).exp()
 
+    # torch.finfo(h.dtype).eps 是取非负的最小值
     h[h < torch.finfo(h.dtype).eps * h.max()] = 0
     return h
 
@@ -43,24 +42,21 @@ def gen_gaussian_target(heatmap, center, radius, k=1):
         out_heatmap (Tensor): Updated heatmap covered by gaussian kernel.
     """
     diameter = 2 * radius + 1
-    gaussian_kernel = gaussian2D(
-        radius, sigma=diameter / 6, dtype=heatmap.dtype, device=heatmap.device)
+    gaussian_kernel = gaussian2D(radius, sigma=diameter / 6, dtype=heatmap.dtype, device=heatmap.device)
 
-    x, y = center
+    x, y = center  # 向下取整后的真实框真实点
 
-    height, width = heatmap.shape[:2]
+    height, width = heatmap.shape[:2]  # 热力图大小 [128, 128]
 
+    # 防止高斯核覆盖的范围超过边界 即 不越界情况下的最小正方形高斯核
     left, right = min(x, radius), min(width - x, radius + 1)
     top, bottom = min(y, radius), min(height - y, radius + 1)
-
+    # heatmap.shape == [128, 128] 高斯核覆盖区域
     masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
-    masked_gaussian = gaussian_kernel[radius - top:radius + bottom,
-                                      radius - left:radius + right]
+    # 高斯核真正起到作用部分的掩码
+    masked_gaussian = gaussian_kernel[radius - top:radius + bottom, radius - left:radius + right]
     out_heatmap = heatmap
-    torch.max(
-        masked_heatmap,
-        masked_gaussian * k,
-        out=out_heatmap[y - top:y + bottom, x - left:x + right])
+    torch.max(masked_heatmap, masked_gaussian * k, out=out_heatmap[y - top:y + bottom, x - left:x + right])
 
     return out_heatmap
 
@@ -167,18 +163,24 @@ def gaussian_radius(det_size, min_overlap):
     """
     height, width = det_size
 
+    # 第一种情况: 真实框和预测框相互重叠, 互不包含
+    # 即预测框与真实框两个角点以r为半径的圆一个内切, 一个外切
     a1 = 1  # G P chongdie
     b1 = (height + width)
     c1 = width * height * (1 - min_overlap) / (1 + min_overlap)
     sq1 = sqrt(b1**2 - 4 * a1 * c1)
     r1 = (b1 - sq1) / (2 * a1)
 
+    # 第二种情况: 真实框包含预测框
+    # 即预测框与真实框两个角点以r为半径的圆内切
     a2 = 4  # G baohan P
     b2 = 2 * (height + width)
     c2 = (1 - min_overlap) * width * height
     sq2 = sqrt(b2**2 - 4 * a2 * c2)
     r2 = (b2 - sq2) / (2 * a2)
 
+    # 第三种情况: 预测框包含真实框
+    # 即预测框与真实框两个角点以r为半径的圆外切
     a3 = 4 * min_overlap  # P baohan G
     b3 = -2 * min_overlap * (height + width)
     c3 = (min_overlap - 1) * width * height

@@ -22,10 +22,10 @@ def gaussian_focal_loss(pred, gaussian_target, alpha=2.0, gamma=4.0):
             factor. Defaults to 4.0.
     """
     eps = 1e-12
-    pos_weights = gaussian_target.eq(1)
+    pos_weights = gaussian_target.eq(1)  # 正样本掩码 有则为 True 无则为 False
     neg_weights = (1 - gaussian_target).pow(gamma)
-    pos_loss = -(pred + eps).log() * (1 - pred).pow(alpha) * pos_weights
-    neg_loss = -(1 - pred + eps).log() * pred.pow(alpha) * neg_weights
+    pos_loss = -(pred + eps).log() * (1 - pred).pow(alpha) * pos_weights  # 正样本损失
+    neg_loss = -(1 - pred + eps).log() * pred.pow(alpha) * neg_weights  # 负样本损失
     return pos_loss + neg_loss
 
 
