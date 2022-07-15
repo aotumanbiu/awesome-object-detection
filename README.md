@@ -23,6 +23,6 @@
   * [ ] [CenterNet: Keypoint Triplets for Object Detection](https://arxiv.org/abs/1904.08189v3)
     
   * [ ] ........
-    
-    
 
+
+* mmdetection-mini
