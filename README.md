@@ -26,4 +26,4 @@
 
 
 * mmdetection-mini  
-  **对于上述的部代码, 直接将其流程注释在mmdetection-mini中**
+  对于上述的部代码, 直接将其流程注释在mmdetection-mini中
