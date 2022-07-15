@@ -18,7 +18,7 @@
 pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
 ```
 
-**2. mmdetection 运行过程中提示 Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools"**
+**2. mmdetection运行过程中或依赖安装过程中提示 Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools"**
 
 解决方法参考: [Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools"的解决办法](https://zhuanlan.zhihu.com/p/471661231)
 
