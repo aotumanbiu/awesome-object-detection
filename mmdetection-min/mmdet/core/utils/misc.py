@@ -149,7 +149,7 @@ def filter_scores_and_topk(scores, score_thr, topk, results=None):
     scores, idxs = scores.sort(descending=True)
     scores = scores[:num_topk]
     topk_idxs = valid_idxs[idxs[:num_topk]]
-    keep_idxs, labels = topk_idxs.unbind(dim=1)
+    keep_idxs, labels = topk_idxs.unbind(dim=1)  # 先验框索引, 先验框对应的类别
 
     filtered_results = None
     if results is not None:
@@ -160,8 +160,9 @@ def filter_scores_and_topk(scores, score_thr, topk, results=None):
         elif isinstance(results, torch.Tensor):
             filtered_results = results[keep_idxs]
         else:
-            raise NotImplementedError(f'Only supports dict or list or Tensor, '
-                                      f'but get {type(results)}.')
+            raise NotImplementedError(f'Only supports dict or list or Tensor, 'f'but get {type(results)}.')
+
+    # 类别的概率, 类别, 索引, 索引对应的[回归预测结果, 先验框]
     return scores, labels, keep_idxs, filtered_results
 
 

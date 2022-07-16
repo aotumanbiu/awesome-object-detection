@@ -80,9 +80,10 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
             with_score_factors = True
             assert len(cls_scores) == len(score_factors)
 
-        num_levels = len(cls_scores)
+        num_levels = len(cls_scores)  # 输出特征数量
 
-        featmap_sizes = [cls_scores[i].shape[-2:] for i in range(num_levels)]
+        featmap_sizes = [cls_scores[i].shape[-2:] for i in range(num_levels)]  # 输出特征的尺寸
+        # 生成先验框
         mlvl_priors = self.prior_generator.grid_priors(
             featmap_sizes,
             dtype=cls_scores[0].dtype,
@@ -182,10 +183,8 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
 
             bbox_pred = bbox_pred.permute(1, 2, 0).reshape(-1, 4)
             if with_score_factors:
-                score_factor = score_factor.permute(1, 2,
-                                                    0).reshape(-1).sigmoid()
-            cls_score = cls_score.permute(1, 2,
-                                          0).reshape(-1, self.cls_out_channels)
+                score_factor = score_factor.permute(1, 2, 0).reshape(-1).sigmoid()
+            cls_score = cls_score.permute(1, 2, 0).reshape(-1, self.cls_out_channels)
             if self.use_sigmoid_cls:
                 scores = cls_score.sigmoid()
             else:
@@ -202,6 +201,7 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
             results = filter_scores_and_topk(
                 scores, cfg.score_thr, nms_pre,
                 dict(bbox_pred=bbox_pred, priors=priors))
+            # 类别的概率, 类别, 索引, 索引对应的[回归预测结果, 先验框]
             scores, labels, keep_idxs, filtered_results = results
 
             bbox_pred = filtered_results['bbox_pred']
@@ -210,8 +210,7 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
             if with_score_factors:
                 score_factor = score_factor[keep_idxs]
 
-            bboxes = self.bbox_coder.decode(
-                priors, bbox_pred, max_shape=img_shape)
+            bboxes = self.bbox_coder.decode(priors, bbox_pred, max_shape=img_shape)
 
             mlvl_bboxes.append(bboxes)
             mlvl_scores.append(scores)
@@ -275,11 +274,11 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
         """
         assert len(mlvl_scores) == len(mlvl_bboxes) == len(mlvl_labels)
 
-        mlvl_bboxes = torch.cat(mlvl_bboxes)
+        mlvl_bboxes = torch.cat(mlvl_bboxes)  # 当前图像的所有解码后的预测框
         if rescale:
-            mlvl_bboxes /= mlvl_bboxes.new_tensor(scale_factor)
-        mlvl_scores = torch.cat(mlvl_scores)
-        mlvl_labels = torch.cat(mlvl_labels)
+            mlvl_bboxes /= mlvl_bboxes.new_tensor(scale_factor)  # 映射到原图尺寸
+        mlvl_scores = torch.cat(mlvl_scores)  # 当前图像的所有解码后的预测框对应的类别概率
+        mlvl_labels = torch.cat(mlvl_labels)  # 当前图像的所有解码后的预测框对应的类别
 
         if mlvl_score_factors is not None:
             # TODO： Add sqrt operation in order to be consistent with
@@ -292,8 +291,7 @@ class BaseDenseHead(BaseModule, metaclass=ABCMeta):
                 det_bboxes = torch.cat([mlvl_bboxes, mlvl_scores[:, None]], -1)
                 return det_bboxes, mlvl_labels
 
-            det_bboxes, keep_idxs = batched_nms(mlvl_bboxes, mlvl_scores,
-                                                mlvl_labels, cfg.nms)
+            det_bboxes, keep_idxs = batched_nms(mlvl_bboxes, mlvl_scores, mlvl_labels, cfg.nms)
             det_bboxes = det_bboxes[:cfg.max_per_img]
             det_labels = mlvl_labels[keep_idxs][:cfg.max_per_img]
             return det_bboxes, det_labels

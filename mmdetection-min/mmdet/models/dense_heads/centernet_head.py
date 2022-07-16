@@ -146,6 +146,10 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
         """
         assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds) == 1
 
+        # heatmap图分支包含C个通道, 每一个通道包含一个类别, heatmap中白色的亮区域表示目标的中心点位置.
+        # 中心点offset分支用来弥补将池化后的低heatmap上的点映射到原图中所带来的像素误差.
+        # 目标大小分支用来预测目标矩形框的w与h偏差值.
+
         # 注意这里的H, W的大小是网络输入大小的 1/4
         # 热力图预测 [B, num_classes, H, W] 代表每一个热力点是否有物体存在，以及物体的种类
         center_heatmap_pred = center_heatmap_preds[0]
@@ -300,8 +304,9 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                 each element represents the class label of the corresponding
                 box.
         """
-        assert len(center_heatmap_preds) == len(wh_preds) == len(
-            offset_preds) == 1
+        assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds) == 1
+
+        # 预测
         result_list = []
         for img_id in range(len(img_metas)):
             result_list.append(
@@ -311,7 +316,7 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                     offset_preds[0][img_id:img_id + 1, ...],
                     img_metas[img_id],
                     rescale=rescale,
-                    with_nms=with_nms))
+                    with_nms=with_nms))  # False
         return result_list
 
     def _get_bboxes_single(self,
@@ -322,6 +327,7 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                            rescale=False,
                            with_nms=True):
         """Transform outputs of a single image into bbox results.
+            将单个图像的输出转换为 bbox 结果
 
         Args:
             center_heatmap_pred (Tensor): Center heatmap for current level with
@@ -344,6 +350,7 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
                 is (n,), and each element represents the class label of the
                 corresponding box.
         """
+        # 返回 [预测框 + 分数], 预测类别
         batch_det_bboxes, batch_labels = self.decode_heatmap(
             center_heatmap_pred,
             wh_pred,
@@ -355,13 +362,12 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
         det_bboxes = batch_det_bboxes.view([-1, 5])
         det_labels = batch_labels.view(-1)
 
-        batch_border = det_bboxes.new_tensor(img_meta['border'])[...,
-                                                                 [2, 0, 2, 0]]
-        det_bboxes[..., :4] -= batch_border
+        batch_border = det_bboxes.new_tensor(img_meta['border'])[..., [2, 0, 2, 0]]
+        det_bboxes[..., :4] -= batch_border  # 减去填充部分
 
         if rescale:
-            det_bboxes[..., :4] /= det_bboxes.new_tensor(
-                img_meta['scale_factor'])
+            # 缩放到原图大小
+            det_bboxes[..., :4] /= det_bboxes.new_tensor(img_meta['scale_factor'])
 
         if with_nms:
             det_bboxes, det_labels = self._bboxes_nms(det_bboxes, det_labels,
@@ -395,20 +401,25 @@ class CenterNetHead(BaseDenseHead, BBoxTestMixin):
               - batch_topk_labels (Tensor): Categories of each box with \
                   shape (B, k)
         """
-        height, width = center_heatmap_pred.shape[2:]
-        inp_h, inp_w = img_shape
+        height, width = center_heatmap_pred.shape[2:]  # 热力图长宽
+        inp_h, inp_w = img_shape  # 输入图像大小
 
-        center_heatmap_pred = get_local_maximum(
-            center_heatmap_pred, kernel=kernel)
+        # 如果当前像素点的大于周边像素点
+        # 则该像素点的值不变, 周边像素带点的值变为0
+        center_heatmap_pred = get_local_maximum(center_heatmap_pred, kernel=kernel)
 
-        *batch_dets, topk_ys, topk_xs = get_topk_from_heatmap(
-            center_heatmap_pred, k=k)
+        *batch_dets, topk_ys, topk_xs = get_topk_from_heatmap(center_heatmap_pred, k=k)
         batch_scores, batch_index, batch_topk_labels = batch_dets
 
+        # 取出索引对应的预测宽高以及中心点的偏移量
         wh = transpose_and_gather_feat(wh_pred, batch_index)
         offset = transpose_and_gather_feat(offset_pred, batch_index)
+
+        # 中心点坐标
         topk_xs = topk_xs + offset[..., 0]
         topk_ys = topk_ys + offset[..., 1]
+
+        # 将预测框大小映射到原图大小
         tl_x = (topk_xs - wh[..., 0] / 2) * (inp_w / width)
         tl_y = (topk_ys - wh[..., 1] / 2) * (inp_h / height)
         br_x = (topk_xs + wh[..., 0] / 2) * (inp_w / width)

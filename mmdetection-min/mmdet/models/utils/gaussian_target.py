@@ -225,9 +225,11 @@ def get_topk_from_heatmap(scores, k=20):
         - topk_xs (Tensor): X-coord of each topk keypoint.
     """
     batch, _, height, width = scores.size()
+    # 将score展平后选取值最大的k个点 以及相应的索引
     topk_scores, topk_inds = torch.topk(scores.view(batch, -1), k)
-    topk_clses = topk_inds // (height * width)
-    topk_inds = topk_inds % (height * width)
+    topk_clses = topk_inds // (height * width)  # 索引 // 宽高 可以得到该点所对应的类比 即 该点所在第几个通道
+    topk_inds = topk_inds % (height * width)  # 该点所在相应通道中索引
+    # 在相应的通道中的坐标
     topk_ys = topk_inds // width
     topk_xs = (topk_inds % width).int().float()
     return topk_scores, topk_inds, topk_clses, topk_ys, topk_xs
@@ -264,7 +266,10 @@ def transpose_and_gather_feat(feat, ind):
     Returns:
         feat (Tensor): Transposed and gathered feature.
     """
+    # [1, 2, H, W] --> [1, H, W, 2]
     feat = feat.permute(0, 2, 3, 1).contiguous()
+    # [1, 2, H, W] --> [1, H * W, 2]
     feat = feat.view(feat.size(0), -1, feat.size(3))
-    feat = gather_feat(feat, ind)
+    # ind.size == [1, k]
+    feat = gather_feat(feat, ind)  # [1, k, 2]
     return feat
