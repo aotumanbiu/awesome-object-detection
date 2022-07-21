@@ -432,15 +432,14 @@ class GFLHead(AnchorHead):
         mlvl_labels = []
         for level_idx, (cls_score, bbox_pred, stride, priors) in enumerate(
                 zip(cls_score_list, bbox_pred_list,
-                    self.prior_generator.strides, mlvl_priors)):
+                    self.prior_generator.strides, mlvl_priors)):  # FPN每层结果分别进行
             assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
             assert stride[0] == stride[1]
 
-            bbox_pred = bbox_pred.permute(1, 2, 0)
-            bbox_pred = self.integral(bbox_pred) * stride[0]
-
-            scores = cls_score.permute(1, 2, 0).reshape(
-                -1, self.cls_out_channels).sigmoid()
+            bbox_pred = bbox_pred.permute(1, 2, 0)  # [H / stride, W / stride, 4 * (16 + 1)]
+            bbox_pred = self.integral(bbox_pred) * stride[0]  # [(H / stride) *  (W / stride), 4] 映射到原图大小
+            # [(H / stride) *  (W / stride), num_classes] 质量预测
+            scores = cls_score.permute(1, 2, 0).reshape(-1, self.cls_out_channels).sigmoid()
 
             # After https://github.com/open-mmlab/mmdetection/pull/6268/,
             # this operation keeps fewer bboxes under the same `nms_pre`.

@@ -225,21 +225,21 @@ def delta2bbox(rois,
     if num_bboxes == 0:
         return deltas
 
-    deltas = deltas.reshape(-1, 4)
+    deltas = deltas.reshape(-1, 4)  # [N, 4]
 
     means = deltas.new_tensor(means).view(1, -1)
     stds = deltas.new_tensor(stds).view(1, -1)
-    denorm_deltas = deltas * stds + means
+    denorm_deltas = deltas * stds + means  # [N, 4]
 
-    dxy = denorm_deltas[:, :2]
-    dwh = denorm_deltas[:, 2:]
+    dxy = denorm_deltas[:, :2]  # [N, 2]
+    dwh = denorm_deltas[:, 2:]  # [N, 2]
 
     # Compute width/height of each roi
-    rois_ = rois.repeat(1, num_classes).reshape(-1, 4)
-    pxy = ((rois_[:, :2] + rois_[:, 2:]) * 0.5)
-    pwh = (rois_[:, 2:] - rois_[:, :2])
+    rois_ = rois.repeat(1, num_classes).reshape(-1, 4)  # [N, 2]
+    pxy = ((rois_[:, :2] + rois_[:, 2:]) * 0.5)  # 先验框中心点[N, 2]
+    pwh = (rois_[:, 2:] - rois_[:, :2])  # 先验框宽高[N, 2]
 
-    dxy_wh = pwh * dxy
+    dxy_wh = pwh * dxy  # TODO 为什么先验框的长宽wh x 预测dxy ????
 
     max_ratio = np.abs(np.log(wh_ratio_clip))
     if add_ctr_clamp:
@@ -248,6 +248,7 @@ def delta2bbox(rois,
     else:
         dwh = dwh.clamp(min=-max_ratio, max=max_ratio)
 
+    # 获得预测框的两个角点
     gxy = pxy + dxy_wh
     gwh = pwh * dwh.exp()
     x1y1 = gxy - (gwh * 0.5)
@@ -256,7 +257,7 @@ def delta2bbox(rois,
     if clip_border and max_shape is not None:
         bboxes[..., 0::2].clamp_(min=0, max=max_shape[1])
         bboxes[..., 1::2].clamp_(min=0, max=max_shape[0])
-    bboxes = bboxes.reshape(num_bboxes, -1)
+    bboxes = bboxes.reshape(num_bboxes, -1)  # [N, 4]
     return bboxes
 
 
