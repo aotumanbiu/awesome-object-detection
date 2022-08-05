@@ -1,8 +1,14 @@
 # awesome-object-detection
-#### 为方便理解不同目标检测网络原理，整理了一些自己debug学习使用的代码，代码可以直接运行。
-#### 同时也便于后续的温习和回顾。
+#####  为方便理解不同目标检测网络原理，整理了一些自己debug学习使用的代码，代码可以直接运行。
+##### 同时，便于后续的温习和回顾。
 
-* anchor-base
+
+
+##### Anchor-based和Anchor-free的主要区别在于：```正样本定义方式的区别，ATSS为消除两者区别的桥梁！！！```
+
+
+
+* anchor-based
 
   * [x] [RetinaNet: Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002v2) 
   * [x] [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325v5)
@@ -12,7 +18,7 @@
 
   * [x] [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355v5)
     
-  * [x] [ATSS: Bridging the Gap Between Anchor-based and Anchor-free Detection via Adaptive Training Sample Selection](https://arxiv.org/abs/1912.02424v4)
+  * [x] [ATSS:](https://arxiv.org/abs/1912.02424v4)
   
   * [x] [Generalized Focal Loss: Learning Qualified and Distributed Bounding Boxes for Dense Object Detection](https://proceedings.neurips.cc//paper/2020/file/f0bda020d2470f2e74990a07a607ebd9-Paper.pdf)
   
@@ -26,4 +32,6 @@
 
 
 * mmdetection-mini  
+
   对于上述的部代码, 直接将其流程注释在mmdetection-mini中
+
