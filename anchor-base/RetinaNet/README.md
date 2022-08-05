@@ -203,3 +203,8 @@ stds = deltas.new_tensor(stds).unsqueeze(0)
 deltas = deltas.sub_(means).div_(stds)
 ```
 
+
+
+#### 5 参考
+
+[轻松掌握 MMDetection 中常用算法(一)：RetinaNet 及配置详解 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/346198300)
