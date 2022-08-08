@@ -12,6 +12,8 @@
 
   * [x] [RetinaNet: Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002v2) 
   * [x] [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325v5)
+  * [x] [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](https://proceedings.neurips.cc/paper/2015/file/14bfa6bb14875e45bba028a21ed38046-Paper.pdf)
+  * [ ] [Mask R-CNN ](https://openaccess.thecvf.com/content_ICCV_2017/papers/He_Mask_R-CNN_ICCV_2017_paper.pdf)
   * [ ] ........
   
 * anchor-free
