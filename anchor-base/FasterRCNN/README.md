@@ -119,3 +119,12 @@ objectness, pred_bbox_deltas = self.head(features)
 
 注意：在Faster R-CNN中检测头输出维度与SDD，RetinaNet，yolo不同。
 
+
+
+#### 4. 补充
+
+​	**a. [RoIAlign源码](https://github.com/ming71/CUDA/blob/master/RoIAlign/roi_align/mmdetection/roi_align.cu)**
+
+​	**b. [ROI Align Cuda版源码解读 ](https://www.it610.com/article/1304734354102063104.htm)**
+
+​	**c. [ROI Align的基本原理及rpn与rcnn head锚框标签制作](https://zhuanlan.zhihu.com/p/73113289)**
